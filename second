@@ -1,0 +1,111 @@
+import pandas as pd
+import numpy as np
+import gensim
+import tensorflow as tf
+from sklearn.preprocessing import normalize
+from gensim.models import Word2Vec
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+datas_given = {
+    'id': range(1, 51),
+    'content': [
+        "Meeting with the UI/UX team  schedule for Thursday at 3 PM to discuss the new app design.",
+        "Finalize the list of job candidatesfor the backend developer position by next Wednesday.",
+        "Reminder: Review the monthly budget with the finance team before the 15th.",
+        "The marketing team needs to submit the Q2 campaign proposals by the end of this week.",
+        "Update the project management tool with the latest deadlines for the frontend team.",
+        "HR to organize a team-building event for the new hires next month. Ideas welcome!",
+        "Data science team meeting moved to Friday 10 AM to discuss the new ML model deployment.",
+        "Send the client the latest version of the API documentation by tomorrow noon.",
+        "Schedule a code review session for the new feature branch before merging it into main.",
+        "Prepare the quarterly report on software development lifecycle improvements.",
+        "Deadline for submitting expense reports is next Friday. Please comply to avoid delays.",
+        "The security audit report for our web application will be ready by next meeting.",
+        "Customer feedback on the new release has been overwhelmingly positive.",
+        "Remember to update the SSL certificates for our web servers before they expire.",
+        "The next sprint planning session is set for Monday morning. Prioritize your tasks.",
+        "All team leads to provide a status update on current projects by EOD Thursday.",
+        "DevOps to present a workshop on containerization best practices next Tuesday.",
+        "The annual performance review schedule will be shared by HR by the end of the week.",
+        "Reminder: Submit all documentation for third-party software licenses to legal by Wednesday.",
+        "Marketing to finalize the product launch press release and share it with stakeholders for feedback.",
+        "Backend team has identified a potential bottleneck in the database layer; planning optimization tasks.",
+        "Frontend team reports a 15% improvement in load times after the latest deployment.",
+        "The new feature set for the mobile app will be discussed in the next product team meeting.",
+        "AI research division is exploring new models to improve our recommendation engine.",
+        "Sales team updated the CRM pipeline with the latest client interactions.",
+        "Customer support highlighted the most common issues reported last month for product improvement.",
+        "Tech talk on cybersecurity best practices is scheduled for the first Friday of next month.",
+        "Legal department confirms the new software license agreement has been finalized.",
+        "Finance requests all departments to submit their updated budget forecasts for the next quarter.",
+        "HR is planning a series of workshops on diversity and inclusion.",
+        "Marketing is reviewing the latest trends for the upcoming social media campaign.",
+        "Product team is collecting user feedback on the beta release of our latest software.",
+        "R&D department is filing patents for three new technologies developed last quarter.",
+        "The company newsletter for next month is focusing on employee achievements.",
+        "Operations team is upgrading the internal network infrastructure to support remote work.",
+        "QA team is setting up automated testing for the new web application features.",
+        "Cloud services are being evaluated for cost optimization and performance improvements.",
+        
+        "Employee training sessions on the new project management software start next week.",
+        "An external audit on data privacy compliance is scheduled for the end of the month.",
+        "Board meeting to discuss the strategic direction for the next fiscal year is coming up.",
+         "The new version of the client dashboard will integrate real-time analytics, aiming for deployment next quarter.",
+        "Weekly check-in for the cross-functional team on the ERP integration project is moved to Tuesday mornings.",
+        "Reminder to all staff: Update your security settings in response to the latest IT bulletin on email phishing threats.",
+         "The product design team has proposed new features for the mobile app based on recent user feedback surveys.",
+        "Dev team is investigating the use of blockchain for enhancing our application's data security measures.",
+        "HR has launched a new portal for managing employee benefits, requiring all employees to update their details by the end of the month.",
+        "Marketing's A/B testing for the new landing page designs has shown a 20% increase in conversion rates.",
+        "The annual developer conference has been scheduled for the third week of September, with a call for internal speakers.",
+        "Finance has approved additional budget for cloud resources, anticipating the need for scaling up due to increased user traffic.",
+        "An internal hackathon is being organized for next month, focusing on innovative solutions for remote collaboration tools."
+
+    ]
+}
+
+df = pd.DataFrame(datas_given)
+
+ 
+tokenized_content = [content.split() for content in df['content']]
+word2vec_model = Word2Vec(sentences=tokenized_content, vector_size=110, window=5, min_count=1, workers=4)
+#  train Word2Vec(yukarısı)
+
+# make embeddings for  contents
+content_embeddings = [np.mean([word2vec_model.wv[word] for word in content], axis=0) for content in tokenized_content   ]
+
+
+content_embeddings_normal= normalize (content_embeddings )
+
+
+#  TF_IDF matriks(kelimeleri vektör boyutuna)
+tfidf_vectorizer = TfidfVectorizer()
+tfidf_matrix = tfidf_vectorizer.fit_transform(df['content'])
+
+# semantic 
+def semantic_ssearch(queries, top_k=5):
+    query_embedding = np.mean([word2vec_model.wv[ word] for word in queries.split()], axis=0)
+    query_embedding_normal = normalize(query_embedding.reshape(1, -1))
+
+   
+    similarity_number = cosine_similarity(query_embedding_normal, content_embeddings_normal).flatten()
+
+    #  indices of top-k 
+    top_indices = np.argsort(similarity_number)[::-1][:top_k]
+
+    # gets more relevant content
+    return df.loc[top_indices, 'content'].tolist()
+
+
+user_query = "UI/UX team meeting "
+
+# making semantic arama
+results = semantic_ssearch(user_query)
+
+
+print("Query:", user_query)
+print("Results:")
+for i, result in enumerate(results, start=1):
+    print(f"{i}. {result}")
